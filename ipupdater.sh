@@ -9,22 +9,22 @@ ROUTE53_ENABLED=true
 
 echo -e "Update delay is set to $UPDATE_DELAY seconds"
 
-if [[ -z "$HE_NET_LOGIN" && -z "$HE_NET_PWD" && -z "$HE_NET_HOST" ]]; then
+if [[ -z "$HE_NET_LOGIN" || -z "$HE_NET_PWD" || -z "$HE_NET_HOST" ]]; then
   echo -e "HE.Net update is not set"
   HE_NET_ENABLED=false
 fi
 
-if [[ -z "$NET_ASSIST_LOGIN" && -z "$HE_NET_PWD" && -z "$HE_NET_HOST" ]]; then
+if [[ -z "$NET_ASSIST_LOGIN" || -z "$NET_ASSIST_PWD" ]]; then
   echo -e "NetAssist update is not set"
   NET_ASSIST_ENABLED=false
 fi
 
-if [[ -z "$NEXT_DNS_PROFILE" && -z "$NEXT_DNS_UPDATE_ID" ]]; then
+if [[ -z "$NEXT_DNS_PROFILE" || -z "$NEXT_DNS_UPDATE_ID" ]]; then
   echo -e "NextDNS update is not set"
   NEXT_DNS_ENABLED=false
 fi
 
-if [[ -z "$ROUTE53_DOMAIN" && -z "$ROUTE53_ZONE_ID" && -z "$ROUTE53_KEY_ID" && -z "$ROUTE53_KEY_SECRET" ]]; then
+if [[ -z "$ROUTE53_DOMAIN" || -z "$ROUTE53_ZONE_ID" || -z "$ROUTE53_KEY_ID" || -z "$ROUTE53_KEY_SECRET" ]]; then
   echo -e "AWS Route 53 update is not set"
   ROUTE53_ENABLED=false
 fi
