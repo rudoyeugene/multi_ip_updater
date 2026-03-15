@@ -1,13 +1,13 @@
 #!/bin/bash
 set -e
 PREV_IP=127.0.0.1
-UPDATE_DELAY="${UPDATE_DELAY:=300s}"
+REPEAT_EVERY="${REPEAT_EVERY:=300s}"
 HE_NET_ENABLED=true
 NET_ASSIST_ENABLED=true
 NEXT_DNS_ENABLED=true
 ROUTE53_ENABLED=true
 
-echo -e "Update delay is set to $UPDATE_DELAY"
+echo -e "Run period is set to $REPEAT_EVERY"
 
 if [[ -z "$HE_NET_LOGIN" || -z "$HE_NET_PWD" || -z "$HE_NET_HOST" ]]; then
   echo -e "HE.Net update is not set"
@@ -94,7 +94,7 @@ update_aws_route53 () {
 
 while true
 do
-  FORMATTED_DELAY=$(echo "$UPDATE_DELAY" | sed -E 's/([0-9]+)s/\1 seconds/; s/([0-9]+)m/\1 minutes/; s/([0-9]+)h/\1 hours/; s/([0-9]+)d/\1 days/')
+  FORMATTED_DELAY=$(echo "$REPEAT_EVERY" | sed -E 's/([0-9]+)s/\1 seconds/; s/([0-9]+)m/\1 minutes/; s/([0-9]+)h/\1 hours/; s/([0-9]+)d/\1 days/')
   NEXT_RUN=$(date -d "+$FORMATTED_DELAY" +"%Y-%m-%d %H:%M:%S")
   echo -e "================================================================"
   echo -e "Update started at $(date)"
@@ -123,5 +123,5 @@ do
     fi
   fi
   PREV_IP=$CURR_IP
-  sleep $UPDATE_DELAY
+  sleep $REPEAT_EVERY
 done

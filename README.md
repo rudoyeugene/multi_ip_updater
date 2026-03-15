@@ -25,7 +25,7 @@ services:
     pull_policy: always
     restart: always
     environment:
-      - UPDATE_DELAY=300 # we will run the script every 5 minutes
+      - REPEAT_EVERY=300s # we will run the script every 300 seconds aka 5 minutes. Supported values: s - seconds, m - minutes, h - hours, d - days
       # AWS Route 53
       - ROUTE53_DOMAIN=your.server.url. # your Route 53 url incl dot
       - ROUTE53_ZONE_ID=AAABBB... # your Route 53 DNS Zone ID
