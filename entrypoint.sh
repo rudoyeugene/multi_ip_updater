@@ -46,7 +46,7 @@ update_net_assist () {
 update_next_dns () {
   echo -e ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
   echo -e "Running NextDNS update:"
-  curl -s https://link-ip.nextdns.io/$NEXT_DNS_PROFILE/$NEXT_DNS_UPDATE_ID
+  curl -s https://link-ip.nextdns.io/$NEXT_DNS_PROFILE/$NEXT_DNS_UPDATE_ID -w "\n"
   echo -e "NextDNS update done"
 }
 
@@ -81,13 +81,21 @@ update_aws_route53 () {
   echo -e ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
   prepare_aws_route53_changes "$1"
   echo -e "Running Route53 update:"
-  awscurl --service route53 \
+  RESPONSE=$(awscurl --service route53 \
           --access_key "$ROUTE53_KEY_ID" \
           --secret_key "$ROUTE53_KEY_SECRET" \
           -X POST \
           -H "Content-Type: text/xml" \
           -d @batch.xml \
-          "https://route53.amazonaws.com/2013-04-01/hostedzone/$ROUTE53_ZONE_ID/rrset"
+          "https://route53.amazonaws.com/2013-04-01/hostedzone/$ROUTE53_ZONE_ID/rrset")
+  if echo "$RESPONSE" | grep -q "ErrorResponse"; then
+      ERROR_MSG=$(echo "$RESPONSE" | sed -n 's/.*<Message>\(.*\)<\/Message>.*/\1/p')
+      echo "Status: ERROR ($ERROR_MSG)"
+  elif echo "$RESPONSE" | grep -qE "PENDING|INSYNC"; then
+      echo "Status: OK"
+  else
+      echo "Status: ERROR (Unknown response format)"
+  fi
   echo -e "Route53 update done"
   rm batch.xml
 }
