@@ -1,6 +1,5 @@
-FROM alpine:latest
-RUN apk add --update --no-cache curl jq bash
-RUN apk add aws-cli --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community/
+FROM alpine:3.21
+RUN apk add --update --no-cache curl jq bash aws-cli
 COPY ipupdater.sh /
 RUN chmod +x ipupdater.sh
 CMD [ "/ipupdater.sh" ]
