@@ -1,13 +1,13 @@
 #!/bin/bash
 set -e
 PREV_IP=127.0.0.1
-UPDATE_DELAY="${UPDATE_DELAY:=300}"
+UPDATE_DELAY="${UPDATE_DELAY:=300s}"
 HE_NET_ENABLED=true
 NET_ASSIST_ENABLED=true
 NEXT_DNS_ENABLED=true
 ROUTE53_ENABLED=true
 
-echo -e "Update delay is set to $UPDATE_DELAY seconds"
+echo -e "Update delay is set to $UPDATE_DELAY"
 
 if [[ -z "$HE_NET_LOGIN" || -z "$HE_NET_PWD" || -z "$HE_NET_HOST" ]]; then
   echo -e "HE.Net update is not set"
@@ -50,25 +50,55 @@ update_next_dns () {
   echo -e "NextDNS update done"
 }
 
-prepeare_aws_route53_changes () {
-  echo -e "Preparing AWS Route 53 batch file for $1"
-  jq -n --arg ROUTE53_DOMAIN "$ROUTE53_DOMAIN" --arg CURR_IP "$CURR_IP" '{"Changes":[{"Action":"UPSERT","ResourceRecordSet":{"Name":$ROUTE53_DOMAIN,"Type":"A","TTL":300,"ResourceRecords":[{"Value":$CURR_IP}]}}]}' > batch.json
+prepare_aws_route53_changes () {
+  echo -e "Preparing AWS Route 53 batch XML for $1"
+  # Генерируем XML напрямую. Это надежнее для Route 53 API.
+  cat <<EOF > batch.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<ChangeResourceRecordSetsRequest xmlns="https://route53.amazonaws.com/doc/2013-04-01/">
+<ChangeBatch>
+    <Changes>
+        <Change>
+            <Action>UPSERT</Action>
+            <ResourceRecordSet>
+                <Name>$ROUTE53_DOMAIN</Name>
+                <Type>A</Type>
+                <TTL>300</TTL>
+                <ResourceRecords>
+                    <ResourceRecord>
+                        <Value>$CURR_IP</Value>
+                    </ResourceRecord>
+                </ResourceRecords>
+            </ResourceRecordSet>
+        </Change>
+    </Changes>
+</ChangeBatch>
+</ChangeResourceRecordSetsRequest>
+EOF
 }
 
 update_aws_route53 () {
   echo -e ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
-  prepeare_aws_route53_changes "$1"
+  prepare_aws_route53_changes "$1"
   echo -e "Running Route53 update:"
-  AWS_ACCESS_KEY_ID=$ROUTE53_KEY_ID AWS_SECRET_ACCESS_KEY=$ROUTE53_KEY_SECRET aws route53 change-resource-record-sets \
-  --hosted-zone-id $ROUTE53_ZONE_ID \
-  --change-batch file://batch.json --output=text
+  awscurl --service route53 \
+          --access_key "$ROUTE53_KEY_ID" \
+          --secret_key "$ROUTE53_KEY_SECRET" \
+          -X POST \
+          -H "Content-Type: text/xml" \
+          -d @batch.xml \
+          "https://route53.amazonaws.com/2013-04-01/hostedzone/$ROUTE53_ZONE_ID/rrset"
   echo -e "Route53 update done"
+  rm batch.xml
 }
 
 while true
 do
+  FORMATTED_DELAY=$(echo "$UPDATE_DELAY" | sed -E 's/([0-9]+)s/\1 seconds/; s/([0-9]+)m/\1 minutes/; s/([0-9]+)h/\1 hours/; s/([0-9]+)d/\1 days/')
+  NEXT_RUN=$(date -d "+$FORMATTED_DELAY" +"%Y-%m-%d %H:%M:%S")
   echo -e "================================================================"
   echo -e "Update started at $(date)"
+  echo -e "Next run at: $NEXT_RUN"
   CURR_IP=$(curl -s https://api.myip.com | jq -r .ip)
   if [ "$PREV_IP" = "$CURR_IP" ]; then
     echo -e "IPs the same, skipping all updates"
